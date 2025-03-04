@@ -1,3 +1,6 @@
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.*;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Stack;
@@ -22,8 +25,9 @@ public class IterableRedBlackTree<T extends Comparable<T>>
      *
      * @param min the minimum for iterators created for this tree, or null for no minimum
      */
-    public void setIteratorMin(T min) {
-        this.min = min;
+    @Override
+    public void setIteratorMin(Comparable<T> min) {
+        this.min = (T) min;  // Explicit cast to T
     }
 
     /**
@@ -33,8 +37,9 @@ public class IterableRedBlackTree<T extends Comparable<T>>
      *
      * @param max the maximum for iterators created for this tree, or null for no maximum
      */
-    public void setIteratorMax(T max) {
-        this.max = max;
+    @Override
+    public void setIteratorMax(Comparable<T> max) {
+        this.max = (T) max;  // Explicit cast to T
     }
 
     /**
@@ -49,8 +54,9 @@ public class IterableRedBlackTree<T extends Comparable<T>>
      */
     @Override
     public Iterator<T> iterator() {
-        return new RBTIterator<>(this.root, min, max);
+        return new RBTIterator<>((RBTNode<T>) this.root, min, max);
     }
+
 
     /**
      * Nested class for Iterator objects created for this tree and returned by the iterator method.
@@ -59,12 +65,9 @@ public class IterableRedBlackTree<T extends Comparable<T>>
      */
     protected static class RBTIterator<R extends Comparable<R>> implements Iterator<R> {
 
-        // Stores the start point (minimum) for the iterator
-        private final R min;
-        // Stores the stop point (maximum) for the iterator
-        private final R max;
-        // Stack for tracking nodes during in-order traversal
-        private final Stack<BinaryTreeNode<R>> stack;
+        private final R min; // Minimum boundary
+        private final R max; // Maximum boundary
+        private final Stack<RBTNode<R>> stack = new Stack<>();
 
         /**
          * Constructor for a new iterator of the tree.
@@ -73,48 +76,50 @@ public class IterableRedBlackTree<T extends Comparable<T>>
          * @param min  the minimum value that the iterator will return
          * @param max  the maximum value that the iterator will return
          */
-        public RBTIterator(BinaryTreeNode<R> root, R min, R max) {
+        public RBTIterator(RBTNode<R> root, R min, R max) {
             this.min = min;
             this.max = max;
-            this.stack = new Stack<>();
             buildStackHelper(root);
         }
 
         /**
-         * Helper method for initializing and updating the stack.
-         * This method:
-         * - Finds the next data value stored in the tree that is between min and max.
-         * - Builds up the stack of ancestor nodes for future traversal.
+         * Helper method to initialize the stack with an in-order traversal.
+         * Pushes leftmost nodes onto the stack first.
          *
-         * @param node the root node of the subtree to process
+         * @param node the root of the tree or subtree being processed
          */
-        private void buildStackHelper(BinaryTreeNode<R> node) {
-            if (node == null) return;
-            
-            if (min == null || node.data.compareTo(min) >= 0) {
-                buildStackHelper(node.left);
-                if (max == null || node.data.compareTo(max) <= 0) {
-                    stack.push(node);
+        private void buildStackHelper(RBTNode<R> node) {
+            while (node != null) {
+                if (min == null || node.getData().compareTo(min) >= 0) {
+                    if (max == null || node.getData().compareTo(max) <= 0) {
+                        stack.push(node); // Push only if within range
+                    }
+                    node = node.childLeft(); // Navigate left
+                } else {
+                    node = node.childRight(); // Skip left if below min
                 }
             }
-            buildStackHelper(node.right);
         }
 
         /**
-         * Returns true if the iterator has another value to return, and false otherwise.
+         * Checks if there are more values to return from the iterator.
          *
-         * @return true if there are more elements, false otherwise
+         * @return true if there are more values, false otherwise
          */
         @Override
         public boolean hasNext() {
+            while (!stack.isEmpty() && max != null && stack.peek().getData().compareTo(max) > 0) {
+                stack.pop(); // Remove values that exceed max
+            }
             return !stack.isEmpty();
         }
+
 
         /**
          * Returns the next value of the iterator.
          *
          * @return the next value in sorted order
-         * @throws NoSuchElementException if the iterator has no more values to return
+         * @throws NoSuchElementException if there are no more values
          */
         @Override
         public R next() {
@@ -122,10 +127,115 @@ public class IterableRedBlackTree<T extends Comparable<T>>
                 throw new NoSuchElementException("No more elements in the iterator");
             }
 
-            BinaryTreeNode<R> node = stack.pop();
-            buildStackHelper(node.right);
-            return node.data;
+            RBTNode<R> node = stack.pop();
+            R nextValue = node.getData();
+
+            // Push right subtree nodes (leftmost path) onto the stack
+            if (node.childRight() != null) {
+                buildStackHelper(node.childRight());
+            }
+
+            // Ensure returned value is within max boundary
+            if (max != null && nextValue.compareTo(max) > 0) {
+                throw new NoSuchElementException("Exceeded max limit of iterator");
+            }
+
+            return nextValue;
         }
     }
+
+    // Test Cases
+
+    /**
+     * Test 1: Iterates over an integer tree with duplicates.
+     * - Inserts integers (including duplicates).
+     * - Ensures iteration returns values in sorted order.
+     */
+    @Test
+    public void testIntegerIterationWithDuplicates() {
+        IterableRedBlackTree<Integer> tree = new IterableRedBlackTree<>();
+
+        // Insert values (with duplicates)
+        tree.insert(10);
+        tree.insert(5);
+        tree.insert(15);
+        tree.insert(5);  // Duplicate
+        tree.insert(10); // Duplicate
+        tree.insert(20);
+
+        // Create iterator with no min/max constraints
+        Iterator<Integer> iterator = tree.iterator();
+
+        // Expected sorted order: [5, 5, 10, 10, 15, 20]
+        int[] expectedOrder = {5, 5, 10, 10, 15, 20};
+        int index = 0;
+
+        while (iterator.hasNext()) {
+            assertEquals(expectedOrder[index++], iterator.next());
+        }
+    }
+
+    /**
+     * Test 2: Iterates over a string tree with no duplicates.
+     * - Inserts words into the tree.
+     * - Ensures iteration returns values in lexicographical order.
+     */
+    @Test
+    public void testStringIteration() {
+        IterableRedBlackTree<String> tree = new IterableRedBlackTree<>();
+
+        // Insert words (no duplicates)
+        tree.insert("banana");
+        tree.insert("apple");
+        tree.insert("cherry");
+        tree.insert("date");
+        tree.insert("elderberry");
+
+        // Create iterator with no min/max constraints
+        Iterator<String> iterator = tree.iterator();
+
+        // Expected sorted order: ["apple", "banana", "cherry", "date", "elderberry"]
+        String[] expectedOrder = {"apple", "banana", "cherry", "date", "elderberry"};
+        int index = 0;
+
+        while (iterator.hasNext()) {
+            assertEquals(expectedOrder[index++], iterator.next());
+        }
+    }
+
+    /**
+     * Test 3: Iterates over an integer tree with both min and max bounds.
+     * - Inserts numbers into the tree.
+     * - Sets a min/max range to limit values returned by the iterator.
+     */
+    @Test
+    public void testIterationWithMinMax() {
+        IterableRedBlackTree<Integer> tree = new IterableRedBlackTree<>();
+
+        // Insert values
+        tree.insert(10);
+        tree.insert(5);
+        tree.insert(15);
+        tree.insert(2);
+        tree.insert(7);
+        tree.insert(12);
+        tree.insert(20);
+
+        // Set min and max values
+        tree.setIteratorMin(5);
+        tree.setIteratorMax(15);
+
+        // Create iterator with min/max constraints
+        Iterator<Integer> iterator = tree.iterator();
+
+        // Expected sorted order within range [5, 15]: [5, 7, 10, 12, 15]
+        int[] expectedOrder = {5, 7, 10, 12, 15};
+        int index = 0;
+
+        while (iterator.hasNext()) {
+            assertEquals(expectedOrder[index++], iterator.next());
+        }
+    }
+
 }
 
