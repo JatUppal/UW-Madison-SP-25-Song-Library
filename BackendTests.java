@@ -2,9 +2,92 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.util.List;
+import java.util.Scanner;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
-public class BackendTests {
+public class BackendTests{
+	
+	/**
+     * Integration Test 1: Ensures backend correctly loads and retrieves songs.
+     */
+    @Test
+    public void backendIntegration_LoadSongs() throws IOException {
+        IterableSortedCollection<Song> tree = new IterableRedBlackTree<>();
+        Backend backend = new Backend(tree);
 
+        backend.readData("songs.csv");  // Load songs into the tree
+
+        // Ensure songs exist
+        assertTrue(backend.getRange(null, null).contains("Hey, Soul Sister"),
+                "Backend should contain 'Hey, Soul Sister' after loading data.");
+        assertTrue(backend.getRange(null, null).contains("TiK ToK"),
+                "Backend should contain 'TiK ToK' after loading data.");
+        assertEquals(600, backend.getRange(null, null).size(),
+                "Backend should contain exactly 600 songs.");
+    }
+
+    /**
+     * Integration Test 2: Ensures filtering by danceability works correctly.
+     */
+    @Test
+    public void backendIntegration_FilterByDanceability() throws IOException {
+        IterableSortedCollection<Song> tree = new IterableRedBlackTree<>();
+        Backend backend = new Backend(tree);
+        backend.readData("songs.csv");
+
+        // Apply danceability filter (e.g., danceability > 70)
+        List<String> filteredSongs = backend.filterSongs(70);
+
+        // Check that filtering worked
+        assertTrue(filteredSongs.contains("TiK ToK"),
+                "'TiK ToK' should be in the filtered results due to high danceability.");
+        assertFalse(filteredSongs.contains("Empire State of Mind (Part II) Broken Down"),
+                "'Empire State of Mind (Part II)' should not be included due to low danceability.");
+    }
+
+    /**
+     * Integration Test 3: Simulates frontend user interaction with backend.
+     */
+    @Test
+	public void frontendIntegration_UserInteraction() throws IOException {
+        IterableSortedCollection<Song> tree = new IterableRedBlackTree<>();
+        Backend backend = new Backend(tree);
+        backend.readData("songs.csv");
+
+        // Simulate user input for frontend testing (list songs → exit)
+        String simulatedInput = "show 3\nquit\n";
+        InputStream stdin = System.in; // Save old input stream
+        System.setIn(new ByteArrayInputStream(simulatedInput.getBytes()));
+
+        Scanner scanner = new Scanner(System.in);
+        Frontend frontend = new Frontend(scanner, backend);
+
+        frontend.runCommandLoop(); // Run UI interaction
+
+        // Restore System.in
+        System.setIn(stdin);
+
+        // Validate that frontend interacts correctly
+        assertNotNull(frontend, "Frontend should run command loop without crashing.");
+    }
+
+    /**
+     * Integration Test 4: Ensures energy filtering works correctly.
+     */
+    @Test
+    public void backendIntegration_FilterByEnergy() throws IOException {
+        IterableSortedCollection<Song> tree = new IterableRedBlackTree<>();
+        Backend backend = new Backend(tree);
+        backend.readData("songs.csv");
+
+        // Apply an energy filter
+        List<String> filteredSongs = backend.getRange(80, 100);
+
+        // Validate results
+        assertFalse(filteredSongs.isEmpty(), "Should return songs with energy between 80-100.");
+    }	
+	
     /**
      * Tests the readData method to ensure songs are correctly loaded from the CSV file
      * and inserted into the tree with the expected data.
