@@ -7,8 +7,7 @@ public interface SortedCollection<T extends Comparable<T>> {
     /**
      * Inserts a new data value into the sorted collection.
      * @param data the new value being inserted
-     * @throws NullPointerException if data argument is null, we do not allow
-     * null values to be stored within a SortedCollection
+     * @throws NullPointerException if data argument is null
      */
     public void insert(T data) throws NullPointerException;
 

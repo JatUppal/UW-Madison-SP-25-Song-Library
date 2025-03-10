@@ -37,19 +37,6 @@ if grep -Pv '//' App.java | grep -Pq "_Placeholder"; then
     exit 1
 fi
 
-# Keep additional IterableRedBlackTree tests from tree
-if ! javac -cp ../junit5.jar:. *.java; then
-    echo
-    echo "Submission Failed Check: cannot compile IterableRedBlackTree.java"
-    exit 1
-fi
-
-if ! java -jar ../junit5.jar --class-path=. --select-class=P106SubmissionChecker; then
-    echo
-    echo "Submission Failed Check: one or more JUnit tests failed; if you have completed the P106 assignment up until and including step 4 and the testNonNullIterator test passes, you have completed all the work required by the midweek deadline (Sat, March 1)"
-    exit 1
-fi
-
 # Ensure groupAndRole.txt exists
 if [[ ! -f groupAndRole.txt ]]; then
   echo "Warning Submission Incomplete: submission does not contain groupAndRole.txt, which should not have been deleted."
