@@ -48,6 +48,15 @@ This project provides a high-performance backend system for managing music metad
 
 ---
 
+## 🎥 Demo Preview
+
+![Demo Preview 1](images/DemoPrev3.gif)
+![Demo Preview 2](images/DemoPrev4.gif)
+
+> 🔗 [Watch full demo video on MediaSpace (1 min)]([https://mediaspace.wisc.edu/media/CS400%20P2%20Demo/1_dvsuxgn2](https://mediaspace.wisc.edu/media/CS400%20P1%20Demo/1_k4nutf2w))
+
+---
+
 ## Getting Started
 
 ### Prerequisites
